@@ -1,1 +1,12 @@
-ecommerce2/settings/db_password.py
+bin/
+include/
+lib/
+.DS_STORE
+.Python
+.idea/
+Scripts/
+pip-selfcheck.json
+tcl/
+src/newsletter/__pycache__/
+src/newsletter/migrations/__pycache__/
+src/trydjango18/__pycache__/
