@@ -1,5 +1,6 @@
 cffi==1.8.3
 cryptography==1.5.2
+Django==1.8.15
 django-crispy-forms==1.6.0
 django-registration-redux==1.4
 enum34==1.1.6
