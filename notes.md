@@ -185,9 +185,79 @@ in the template:
 - to do this: create a custom model manager and queryset in the model:
 
 ```
+from django.db import models
+from django.core.urlresolvers import reverse
 
+# Create your models here.
+
+class ProductQuerySet(models.query.QuerySet):
+    def active(self):
+        return self.filter(active=True)
+
+class ProductManager(models.Manager):
+    def get_queryset(self):
+        return ProductQuerySet(self.model,using=self._db)
+
+    def all(self,*args,**kwargs):
+        return self.get_queryset().active()
+
+
+class Product(models.Model):
+    title = models.CharField(max_length=120)
+    description = models.TextField(blank=True,null=True)
+    price = models.DecimalField(decimal_places=2,max_digits=20)
+    active = models.BooleanField(default=True)
+
+    objects = ProductManager()
+
+    def __str__(self):
+        return self.title
+
+    def get_absolute_url(self):
+        return reverse('product_detail',kwargs={'pk':self.pk})  
 
 ```
+##3. Use a separate model for Product variations with one-to-many relationship
+- add product variations in admin view (TODO: build userview to add variation based on primary key for product (choice dropdown menu in the form))
+- refer to related variation data in the template: {{ object.variation_set.all }} . 
+    - you can iterate it over.
+    - you can make a selection choice on the page
+    ```
+    <select class="'form-control">
+    {% for vari_obj in object.variation_set.all %}
+    <option value = '{{ vari_obj }}'>{{ vari_obj }}</option>
+    {% endfor %}
+    </select>
+    ```
+## 4. Use post Save signal for creating default variations for each product
+this allow us to make things happen outside of context of views or admin. when the model save, it will send signal for us to do various things.
+- three signals that will be sent out when yous save a record in a model: sender, instance, created
+- we create a function that take the three signals as arguments and do what we want to do post save
+- use the post_save.connect(product_post_save_receiver,sender=Product) to connect the function and the model
+```
+def product_save_receiver(sender, instance, created, *args,**kwargs):
+    print(sender)
+    print(instance)
+    print(created)
+    product = instance
+    variations = product.variation_set.all()
+    if variations.count() ==0:
+        new_var = Variation()
+        new_var.product =product
+        new_var.title = 'Default'
+        new_var.price = product.price
+        new_var.save()
+
+post_save.connect(product_save_receiver,sender=Product)
+```
+## 5. clean up product detail template with html and bootstrap div class
+
+## 6. Create model for productImage uploads
+- one-to-many relationship: product as the Foreignkey. 
+- unicode return the related product title
+- image field only works if python pillow package installed ( you can filefield, but there are some differences)
+- define a function,which take an instance and filename, and return a dynamic and customized upload location (slugify version)
+
 
 
 
