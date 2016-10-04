@@ -3,6 +3,13 @@ include/
 lib/
 .DS_STORE
 .Python
-.idea/
+*.py[cod]
+pip-selfcheck.json
+.idea/deployment.xml
+.idea/digital-marketplace.iml
+.idea/inspectionProfiles/
+.idea/misc.xml
+.idea/modules.xml
+.idea/workspace.xml
 Scripts/
 tcl/
