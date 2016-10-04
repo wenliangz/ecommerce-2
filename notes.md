@@ -1,4 +1,4 @@
-
+# ===== URL ===========
 ## 1. URL best practice: keep app-related URLs inside the app.
 - use include in main url.py and create a app-specific url.py in the app. e.g.
 
@@ -34,17 +34,40 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.conf.urls.static import static
 from django.contrib import admin
-from .views import ProductDetailView,ProductListView
+from .views import ProductDetailView,ProductListView,VariationListView
 
 urlpatterns = [
     # Examples:
     # url(r'^$', 'newsletter.views.home', name='home'),
-    url(r'^(?P<pk>\d+)',ProductDetailView.as_view(),name='product_detail'),
+    url(r'^(?P<pk>\d+)/$',ProductDetailView.as_view(),name='product_detail'),
+    url(r'^(?P<pk>\d+)/inventory/$',VariationListView.as_view(),name='product_inventory'),
     url(r'^$',ProductListView.as_view(),name='products'),
     # url(r'^(?P<id>\d+)','products.views.product_detail_view_func',name='product_detail_function')
 
 ]
 ```
+
+## 2. Dynamic URL
+- Using regular expression and python Named Group for the url pattern, we can capture the keyword in the url into a variable, which can be passed to the view function for more dynamic views
+    ```
+    from django.conf import settings
+    from django.conf.urls import include, url
+    from django.conf.urls.static import static
+    from django.contrib import admin
+    from .views import ProductDetailView,ProductListView,VariationListView
+    
+urlpatterns = [
+    url(r'^(?P<pk>\d+)/$',ProductDetailView.as_view(),name='product_detail'),
+    url(r'^(?P<pk>\d+)/inventory/$',VariationListView.as_view(),name='product_inventory'),
+    url(r'^$',ProductListView.as_view(),name='products'),
+
+]
+    ```
+
+## 3. Notes and Tips for URL: 
+- in the main url, after slash "/", don't put $, which indicating the end of url
+- The url pattern will be searched in the order from the beginning to the end of the list of the urlpatterns. Once found, the research will stop! So in the app url, if you want the url to match exactly the regular expression, put '$' in the end, so that it wouldn't match any other string attached after url. 
+- when writing aboslute path, if it begins with slash "/", it will append the address to the main url. If no "/", it will append to the current url
 
 # ======= Detail and List View  ==============
 
@@ -54,6 +77,7 @@ urlpatterns = [
 - However, in CBV, you have to remember a lot of built-in defaults(attributes and methods) such as template_name, get_object(),get_context_data() , in order to use or override them correctly. e.g.
     - content variable for an object in detail view: object (or modelname); in list view is: object_list (or modelname_list)
     - template name and path in detail view is: appname/modelname_detail.html; in list view is: appname/modelname_list.html
+    - Note the default argument for object id in CBV is "pk" instead of "id", although you can override it or use slug field. In the functional view, it is much easier to change it. 
     
 ```
 from django.views.generic.detail import DetailView
@@ -85,20 +109,8 @@ def product_detail_view_func(request,id):
     }
     return render(request, template, context)
 ```
-- URL setting
-    - Note the default argument for object id in CBV is pk instead of id.  
-```
-urlpatterns = [
-    # Examples:
-    # url(r'^$', 'newsletter.views.home', name='home'),
-    url(r'^cbv/(?P<pk>\d+)',ProductDetailView.as_view(),name='product_detail'),
-    url(r'^(?P<id>\d+)','products.views.product_detail_view_func',name='product_detail_function')
 
-]
-```
-- Tips for url: 
-    - in the main url, after slash "/", don't put $, which indicating the end of url
-    - when writing aboslute path, if it begins with slash "/", it will append the address to the main url. If no "/", it will append to the current url
+
 
 ##3. Override method in Class-based view(CBV):
 - In the function-based view, everything is very obvious as we provide everything to the function ourselves, such as template name, context. In the classed-base view, they are inherited from parents. When you need to customize, you need to override the method or attributes. For example, context data in CBV is return by the method called, get_context_data(self). To customize the context data, we just need to write our own method get_context_data(self) to override. Normally, we want to add our own data to the existing parent data, so we usually do a supercall of the parent class to get the context and append our own data before return it. e.g.
@@ -250,16 +262,157 @@ def product_save_receiver(sender, instance, created, *args,**kwargs):
 
 post_save.connect(product_save_receiver,sender=Product)
 ```
-## 5. clean up product detail template with html and bootstrap div class
+## 5. clean up product detail view in the template with html and bootstrap div class
 
 ## 6. Create model for productImage uploads
 - one-to-many relationship: product as the Foreignkey. 
 - unicode return the related product title
 - image field only works if python pillow package installed ( you can filefield, but there are some differences)
 - define a function,which take an instance and filename, and return a dynamic and customized upload location (slugify version)
+- notice the difference of static file storage and static url:
+```
+{{ img.image.file }}
+{{ img.image.url }}
+```
+## 7. Add Search Query in the product list view (use bootstrap)
+- Search query put the following string into the url: url/?queykeyword=value. for example:
+```
+http://127.0.0.1:8000/products/?q=mp3
+```
+- To make the search work, override the instance method of ListView: get_queryset(). Use Q function to search multiple fields. Note that different field types(e.g. text and decimal), you will have to do separate Q search and combine them.
+```
+class ProductListView(ListView):
+    model = Product
+    # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
+    def get_context_data(self, **kwargs):
+        context = super(ProductListView,self).get_context_data(**kwargs)
+        context['now'] = timezone.now()
+        return context
+
+    def get_queryset(self,*args,**kwargs):
+        qs = super(ProductListView,self).get_queryset(*args,**kwargs)
+        query = self.request.GET.get('q')
+        if query:
+            qs = self.model.objects.filter(
+                Q(title__icontains = query) |
+                Q(description__icontains=query)
+                  )
+            try:
+                qs2 = self.model.objects.filter(
+                    Q(price=query)
+                )
+                qs = (qs | qs2).distinct()
+            except:
+                pass
+        return qs
+```
+- create a simple search bar with
+    - the form of method=GET. 
+    - the url for action will the same url as the current page, {% url "product" %}
+    - the name attribute for the input tag will be 'q' 
+    ```
+    <form class="navbar-form navbar-left" method="GET" role = 'search' action="{% url 'products' %}">
+    <div class="form-group">
+    <input type="text" class="form-control" placeholder="Search" name="q">
+    </div>
+    <button type="submit" class="btn btn-default">Submit</button>
+    </form>
+    ```
+
+## 8. Create list view of related objects
+- We can pass keyword args, product primary key(pk), from url to view function to get a queryset of related data(product variations) 
+- url:
+```
+url(r'^(?P<pk>\d+)/inventory',VariationListView.as_view(),name='product_inventory'),
+```
+- view:
+```
+class VariationListView(ListView):
+    model = Variation
+    queryset = Variation.objects.all()
+    # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
+    def get_queryset(self,*args,**kwargs):
+        product_pk = self.kwargs.get('pk')
+        if product_pk:
+            product = get_object_or_404(Product,pk=product_pk)
+            queryset = Variation.objects.filter(product=product)
+        return queryset
+```
 
 
+# ======= Add Form to the view for Editing ==============
+- Single ModelFrom: use to add/edit one object on a view (detail view)
+- FormSet: when we need add/edit multiple objects on a view( e.g. VariationsListView)
+ 
+## 1. Add FormSet to the VariationListView for editing multiple objects
+- Create a model FormSet for Variation model, in form.py. Use extra number for adding new items. If just editing/updating existing items, set it to zero.
+```
+from django import forms
+from django.forms.models import modelformset_factory
 
+from .models import Variation
 
+class VariationInventoryForm(forms.ModelForm):
+    class Meta:
+        model = Variation
+        fields = [
+            'title'
+            'price',
+            'sale_price',
+            'inventory',
+            'active',
+        ]
 
-# =======   ==============
+VariationInventoryFormSet = modelformset_factory(Variation,form=VariationInventoryForm,extra=2)
+```
+- Add the model formset instance (take a queryset as argument) to the context of the VarationListView
+ ```
+ 
+ ```
+- Render formset in the VariationListView
+    - simple render of formset: `{{ formset.as_p }}`
+    - understand managementForm: The management form is available as an attribute of the formset itself. When rendering a formset in a template, you can include all the management data by rendering {{ my_formset.management_form }} (substituting the name of your formset as appropriate).
+    ```
+        <form method="POST" action=""> {% csrf_token %}
+        {{ formset.management_form }}
+        {% for form in formset %}
+            {{form.instance.product.title  }}
+            {{ form.instance.title }}
+            {{ form.as_p }}
+        {% endfor %}
+
+    <input type = 'submit' value ='update' class="btn" />
+    </form>
+    ```
+
+- define and override instance method, post(), for handling post events after submitting the formset(updating existing items and saving new items).
+```
+class VariationListView(ListView):
+    model = Variation
+    queryset = Variation.objects.all()
+    # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
+    def get_context_data(self, *args,**kwargs):
+        context = super(VariationListView,self).get_context_data(*args,*kwargs)
+        context['formset'] = VariationInventoryFormSet(queryset=self.get_queryset())
+        return context
+
+    def get_queryset(self,*args,**kwargs):
+        product_pk = self.kwargs.get('pk')
+        if product_pk:
+            product = get_object_or_404(Product,pk=product_pk)
+            queryset = Variation.objects.filter(product=product)
+        return queryset
+
+    def post(self,request, *args,**kwargs):
+        formset = VariationInventoryFormSet(request.POST,request.FILES)
+        if formset.is_valid():
+            formset.save(commit=False)
+            for form in formset:
+                new_item = form.save(commit=False)
+                product_pk = self.kwargs.get('pk')
+                product = get_object_or_404(Product,pk=product_pk)
+                new_item.product = product
+                new_item.save()
+            messages.success(request, 'your inventory and pricing has been udpated')
+        return redirect('products')
+```

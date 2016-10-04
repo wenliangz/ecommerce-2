@@ -38,7 +38,7 @@ class Variation(models.Model):
     price = models.DecimalField(decimal_places=2, max_digits=20)
     sale_price = models.DecimalField(decimal_places=2, max_digits=20,null= True, blank=True)
     active = models.BooleanField(default=True)
-    invnetory = models.IntegerField(null = True, blank=True) # negative refer to unlimited amount
+    inventory = models.IntegerField(null = True, blank=True) # negative refer to unlimited amount
 
     def __str__(self):
         return self.title
@@ -75,11 +75,11 @@ def image_upload_to(instance, filename):
     slug =slugify(title)
     file_extension = filename.split('.')[1]
     new_filename =  '%s.%s'%(instance.id,file_extension)
-    return 'products/%s/%s'%(slug,filename)
+    return 'products/%s/%s'%(slug,new_filename)
 
 class ProductImage(models.Model):
     product = models.ForeignKey(Product)
-    image = models.ImageField(upload_to='products/')
+    image = models.ImageField(upload_to=image_upload_to)
 
     def __str__(self):
         return self.product.title  # return the related product title by foreign key
