@@ -340,7 +340,7 @@ class VariationListView(ListView):
 ```
 
 
-# ======= Add Form to the view for Editing ==============
+# ======= Add Form to the view for Adding/Editing objects ==============
 - Single ModelFrom: use to add/edit one object on a view (detail view)
 - FormSet: when we need add/edit multiple objects on a view( e.g. VariationsListView)
  
@@ -415,4 +415,50 @@ class VariationListView(ListView):
                 new_item.save()
             messages.success(request, 'your inventory and pricing has been udpated')
         return redirect('products')
+```
+## 2. Login required Mixin
+One of the big advantage of CBV is to use custom mixins. We can seperate common instance methods from different views and wrapped into a class, called mixins, from which CBV can inherit from. For example, using Login required Mixin can allow loggin as staff for adding/editing items, but not available for not loggin or non-staff member.
+- Create a mixins.py file and define different mixin classes, from which the CBVs can inherit.
+- Login required Mixin
+```
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.http import Http404
+
+class StaffRequiredMixin:
+    @classmethod
+    def as_view(self,*args,**kwargs):
+        view = super(StaffRequiredMixin,self).as_view(*args,**kwargs)
+        return login_required(view)
+
+    @method_decorator(login_required)
+    def dispatch(self,request,*args,**kwargs):
+        if request.user.is_staff:
+            return super(StaffRequiredMixin,self).dispatch(request,*args,**kwargs)
+        else:
+            raise Http404
+
+
+class LoginRequiredMixin:
+    @classmethod
+    def as_view(self, *args, **kwargs):
+        view = super(LoginRequiredMixin, self).as_view(*args, **kwargs)
+        return login_required(view)
+
+    @method_decorator(login_required)
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            return super(LoginRequiredMixin, self).dispatch(request, *args, **kwargs)
+```
+
+## 3. Django message and Bootstrap alert implementation 
+- import django contribute app
+- Bootstrap alert
+## 4. Social Share and font awesome
+ - Facebook
+```
+<a href="https://www.facebook.com/sharer/sharer.php?u={{request.build_absolute_url}}"> 
+<i class="fa fa-facebook-square fa-3x></i>
+</a>
 ```

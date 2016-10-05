@@ -8,6 +8,7 @@ from django.contrib import messages
 
 from .models import Product,Variation
 from .forms import VariationInventoryFormSet
+from .mixins import LoginRequiredMixin,StaffRequiredMixin
 # Create your views here.
 
 class ProductDetailView(DetailView):
@@ -15,7 +16,7 @@ class ProductDetailView(DetailView):
     # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
 
 
-class VariationListView(ListView):
+class VariationListView(LoginRequiredMixin,ListView):
     model = Variation
     queryset = Variation.objects.all()
     # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
