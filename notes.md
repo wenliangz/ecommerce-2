@@ -231,9 +231,10 @@ class Product(models.Model):
 ```
 ##3. Use a separate model for Product variations with one-to-many relationship
 - add product variations in admin view (TODO: build userview to add variation based on primary key for product (choice dropdown menu in the form))
-- refer to related variation data in the template: {{ object.variation_set.all }} . 
-    - you can iterate it over.
-    - you can make a selection choice on the page
+- show related data of product variations on the product detail view. 
+    - refer to related variation data in the template: {{ object.variation_set.all }} . 
+    - you can iterate it over to make a selection choice on the page. 
+    - to make a portal table, just like in filemaker? 
     ```
     <select class="'form-control">
     {% for vari_obj in object.variation_set.all %}
@@ -320,7 +321,8 @@ class ProductListView(ListView):
     ```
 
 ## 8. Create list view of related objects
-- We can pass keyword args, product primary key(pk), from url to view function to get a queryset of related data(product variations) 
+- The goal is to click the product and go to the view of a list of variations of that product. 
+- To do that, We can pass keyword args, product primary key(pk), of the product from url to view function to get a queryset of related data(product variations) 
 - url:
 ```
 url(r'^(?P<pk>\d+)/inventory',VariationListView.as_view(),name='product_inventory'),
@@ -341,6 +343,7 @@ class VariationListView(ListView):
 
 
 # ======= Add Form to the view for Adding/Editing objects ==============
+
 - Single ModelFrom: use to add/edit one object on a view (detail view)
 - FormSet: when we need add/edit multiple objects on a view( e.g. VariationsListView)
  
@@ -416,7 +419,10 @@ class VariationListView(ListView):
             messages.success(request, 'your inventory and pricing has been udpated')
         return redirect('products')
 ```
-## 2. Login required Mixin
+
+# ======== Improve the View ==========
+
+## 1. Set priviliages for the view:  Login required Mixin
 One of the big advantage of CBV is to use custom mixins. We can seperate common instance methods from different views and wrapped into a class, called mixins, from which CBV can inherit from. For example, using Login required Mixin can allow loggin as staff for adding/editing items, but not available for not loggin or non-staff member.
 - Create a mixins.py file and define different mixin classes, from which the CBVs can inherit.
 - Login required Mixin
@@ -452,13 +458,52 @@ class LoginRequiredMixin:
             return super(LoginRequiredMixin, self).dispatch(request, *args, **kwargs)
 ```
 
-## 3. Django message and Bootstrap alert implementation 
+## 2. Django message and Bootstrap alert implementation after updating
 - import django contribute app
 - Bootstrap alert
-## 4. Social Share and font awesome
+
+## 3. Social Share and font awesome
  - Facebook
 ```
 <a href="https://www.facebook.com/sharer/sharer.php?u={{request.build_absolute_url}}"> 
 <i class="fa fa-facebook-square fa-3x></i>
 </a>
 ```
+## 4. jQuery Ajax for updating values on the page when selecting product variation 
+- To test if jQuery is working. Add the following the end of the body tag in the base.html:
+```
+<script>
+    $(document).ready(function(){
+        alert('hello')
+    })
+</script>
+```
+- jQuery implementation: Add a jquery block in the base.html in order to make jQuery work in all the html documents.
+```
+<script>
+    $(document).ready(function(){
+        {% block jquery %}
+        {% endblock %}
+    })
+</script>
+
+```
+- jQuery Script: In the product_detail.html, we want to write the script in the jQuery block. The goal is to select the variations and change the price on page. First, we need to define elements id we need to refer to, the options for varation and price. 
+    - $() is the html element selector in jQuery. The format is very like the CSS selector. e.g. $("#div"), $("h3")
+    - 
+
+
+# ======== Product Category Model  ==========
+
+## 1. Relationship between Product and Category Model
+- Create category model: the name and the description of any categories 
+- Add two fields in the product model:
+    - categories: many-to-many with product
+    - default: one-to-many with product
+- Add and manage categories in the admin
+- Show the default category in the product detail view
+
+## 2. Category List and Detail Views
+- Create a separate url file, urls_categories.py, in the product folder. 
+- 
+ 

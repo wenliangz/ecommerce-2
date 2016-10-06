@@ -6,10 +6,18 @@ from django.http import Http404
 from django.utils import timezone
 from django.contrib import messages
 
-from .models import Product,Variation
+from .models import Product,Variation,Category
 from .forms import VariationInventoryFormSet
 from .mixins import LoginRequiredMixin,StaffRequiredMixin
 # Create your views here.
+
+class CategoryListView(ListView):
+    model = Category
+    queryset = Category.objects.all()
+    template_name = 'products/product_list.html'
+
+class CategoryDetailView(DetailView):
+    model = Category
 
 class ProductDetailView(DetailView):
     model = Product
