@@ -579,7 +579,7 @@ cycle tag: Produces one of its arguments each time this tag is encountered. The 
 # =================== Carts App (Order App)===================
 ## 1. Many-to-Many relationship through intermediate model:
 ```
-Product Variations -------------<- CartItem ->----------- Cart(Order)
+Product Variations -------------<- CartItem ->----------- Cart
 ```
 ## 2. Add,Remove,Update Cart data on CarView
 - Create Cart CBV from base view by overriding get()method
@@ -606,3 +606,7 @@ selector.function(function handler)
 - jQuery Flash Message
 - Post delete signal for empty Cart
 - Ajax for updating Cart Count
+
+
+# =================== Order App (Order App)===================
+The relation between Order and Cart: The orders are the Carts with different status. The order can be "Created", "Completed", "Canceled"...etc.
