@@ -1,4 +1,5 @@
-# ===== URL ===========
+# ============  Product App  ===========
+## ---------------- URL --------------------
 ## 1. URL best practice: keep app-related URLs inside the app.
 - use include in main url.py and create a app-specific url.py in the app. e.g.
 
@@ -69,7 +70,7 @@ urlpatterns = [
 - The url pattern will be searched in the order from the beginning to the end of the list of the urlpatterns. Once found, the research will stop! So in the app url, if you want the url to match exactly the regular expression, put '$' in the end, so that it wouldn't match any other string attached after url. 
 - when writing aboslute path, if it begins with slash "/", it will append the address to the main url. If no "/", it will append to the current url
 
-# ======= Detail and List View  ==============
+##------------ Detail and List View ----------------
 
 
 ##2. Function based view vs Class-based view(CBV):
@@ -342,7 +343,7 @@ class VariationListView(ListView):
 ```
 
 
-# ======= Add Form to the view for Adding/Editing objects ==============
+##------------------- Add Form to the view for Adding/Editing objects ----------------
 
 - Single ModelFrom: use to add/edit one object on a view (detail view)
 - FormSet: when we need add/edit multiple objects on a view( e.g. VariationsListView)
@@ -420,7 +421,7 @@ class VariationListView(ListView):
         return redirect('products')
 ```
 
-# ======== Improve the View ==========
+## ---------------------- Improve the Product View ----------------------------------
 
 ## 1. Set priviliages for the view:  Login required Mixin
 One of the big advantage of CBV is to use custom mixins. We can seperate common instance methods from different views and wrapped into a class, called mixins, from which CBV can inherit from. For example, using Login required Mixin can allow loggin as staff for adding/editing items, but not available for not loggin or non-staff member.
@@ -492,8 +493,73 @@ class LoginRequiredMixin:
     - $() is the html element selector in jQuery. The format is very like the CSS selector. e.g. $("#div"), $("h3")
     - 
 
+## 4. Related products in the product detail view
+- define custom model manager and queryset
+```
+class ProductQuerySet(models.query.QuerySet):
+    def active(self):
+        return self.filter(active=True)
 
-# ======== Product Category Model  ==========
+class ProductManager(models.Manager):
+    def get_queryset(self):
+        return ProductQuerySet(self.model,using=self._db)
+
+    def all(self,*args,**kwargs):
+        return self.get_queryset().active()
+
+    def get_related(self,instance):
+        products_one = self.get_queryset().filter(categories__in = instance.categories.all())
+        products_two = self.get_queryset().filter(default = instance.default)
+        qs = (products_one | products_two).exclude(id=instance.id).distinct()
+        return qs
+
+class Product(models.Model):
+    title = models.CharField(max_length=120)
+    description = models.TextField(blank=True,null=True)
+    price = models.DecimalField(decimal_places=2,max_digits=20)
+    active = models.BooleanField(default=True)
+    categories = models.ManyToManyField('Category',blank = True)
+    default = models.ForeignKey('Category',related_name='default_category',null=True,blank=True)
+
+    objects = ProductManager()
+```
+
+- Distinct and Random QuerySets for related products
+```
+import random
+class ProductDetailView(DetailView):
+    model = Product
+    # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
+    def get_context_data(self, *args, **kwargs):
+        context = super(ProductDetailView, self).get_context_data(*args, **kwargs)
+        instance = self.get_object()
+        context['related'] = sorted(Product.objects.get_related(instance)[:6],key = lambda x: random.random())
+        return context
+```
+## 6. cycle tag in the template with div tag to create thumbnailview(boxview)
+cycle tag: Produces one of its arguments each time this tag is encountered. The first argument is produced on the first encounter, the second argument on the second encounter, and so forth. Once all arguments are exhausted, the tag cycles to the first argument and produces it again.
+```
+{% block content %}
+ <div class="row">
+{%  for product in object_list %}
+    <div class="col-xs-4">
+    <div class="thumnail text-center">
+    <h4><a href=" {{ product.get_absolute_url }}">{{ product.title }}</a></h4>
+        {% if product.get_image_url %}
+        <a href ='{{ product.get_absolute_url }}'><img id="img" class="img-responsive" src="{{ product.get_image_url }}"/></a><br/>
+        {% endif %}
+    </div>
+    </div>
+    {% cycle '' '' '</div><div class="row"">' %}
+{% endfor %}
+</div>
+{% endblock content %}
+```
+## 7. Template tag Include with Variable
+ 
+ 
+
+## --------------------- Product Category Model and View ---------------------
 
 ## 1. Relationship between Product and Category Model
 - Create category model: the name and the description of any categories 
@@ -507,3 +573,36 @@ class LoginRequiredMixin:
 - Create a separate url file, urls_categories.py, in the product folder. 
 - 
  
+## ----------- Feature Product Model and View ----------------
+
+
+# =================== Carts App (Order App)===================
+## 1. Many-to-Many relationship through intermediate model:
+```
+Product Variations -------------<- CartItem ->----------- Cart(Order)
+```
+## 2. Add,Remove,Update Cart data on CarView
+- Create Cart CBV from base view by overriding get()method
+    - modifying GET request by modifying url
+    - GET request through 'Add to Cart' html form in product detail view
+- Add SingleObjectMxin and override get_object() method
+- Django sessions: Django sessions allow to store and retrieve data per site visitor basis, even when users are not logged in
+- Format Cart and Remove items
+- Update Cartitems quantity in cart
+
+## 3. LineItem total 
+- update lineitem total in CartItem using model pre-save signal, refreshing the page
+- update subtotal in Cart using model pre-save signal, refreshing the page
+
+## 4. Ajax   ( Compared to FileMaker Script Trigger)
+- Ajax: Asynchronous Javascript And Xml. We can do data passing without refeshing the page. 
+```
+selector.function(function handler)
+```
+    - selector: 
+    - event: change(), click()
+    - event handler: function(){ }
+- Ajax for updating linetiem total and cart subtotal 
+- jQuery Flash Message
+- Post delete signal for empty Cart
+- Ajax for updating Cart Count

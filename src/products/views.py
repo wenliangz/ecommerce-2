@@ -18,11 +18,24 @@ class CategoryListView(ListView):
 
 class CategoryDetailView(DetailView):
     model = Category
+    def get_context_data(self, *args, **kwargs):
+        context = super(CategoryDetailView, self).get_context_data(*args, **kwargs)
+        obj = self.get_object()
+        product_set = obj.product_set.all()
+        default_products = obj.default_category.all()
+        products = (product_set | default_products).distinct()
+        context['products'] = products
+        return context
 
+import random
 class ProductDetailView(DetailView):
     model = Product
     # template_name = '<appname>/<modelname>_detail.html'   # this is the default for the template in CBV
-
+    def get_context_data(self, *args, **kwargs):
+        context = super(ProductDetailView, self).get_context_data(*args, **kwargs)
+        instance = self.get_object()
+        context['related'] = sorted(Product.objects.get_related(instance)[:6],key = lambda x: random.random())
+        return context
 
 class VariationListView(LoginRequiredMixin,ListView):
     model = Variation

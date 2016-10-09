@@ -35,9 +35,26 @@
     <a href ='#'>Add to Cart</a>
     <br/>
     <hr/>
-    <h4>Related Products</h4></div>
-{# End of Product SideBar#}
+    <h4>Related Products</h4>
+
+ <div class="row">
+{%  for product in related %}
+    <div class="col-xs-6">
+    <div class="thumnail text-center">
+    <h4><a href=" {{ product.get_absolute_url }}">{{ product.title }}</a></h4>
+        {% if product.get_image_url %}
+        <a href ='{{ product.get_absolute_url }}'><img id="img" class="img-responsive" src="{{ product.get_image_url }}"/></a><br/>
+        {% endif %}
+    </div>
+    </div>
+    {% cycle '' '</div><div class="row"">' %}
+{% endfor %}
+
+ </div>
 </div>
+
+{# End of Product SideBar#}
+
 
 
 {% endblock %}

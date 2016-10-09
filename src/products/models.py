@@ -17,6 +17,11 @@ class ProductManager(models.Manager):
     def all(self,*args,**kwargs):
         return self.get_queryset().active()
 
+    def get_related(self,instance):
+        products_one = self.get_queryset().filter(categories__in = instance.categories.all())
+        products_two = self.get_queryset().filter(default = instance.default)
+        qs = (products_one | products_two).exclude(id=instance.id).distinct()
+        return qs
 
 class Product(models.Model):
     title = models.CharField(max_length=120)
@@ -33,6 +38,12 @@ class Product(models.Model):
 
     def get_absolute_url(self):
         return reverse('product_detail',kwargs={'pk':self.pk})
+
+    def get_image_url(self):
+        img = self.productimage_set.first()
+        if img:
+            return img.image.url
+        return img
 
 class Variation(models.Model):
     product =  models.ForeignKey(Product)
@@ -85,6 +96,8 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return self.product.title  # return the related product title by foreign key
+
+
 
 class Category(models.Model):
     title = models.CharField(max_length=120,unique =True)
